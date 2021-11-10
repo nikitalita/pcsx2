@@ -901,6 +901,10 @@ void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 
 	GIFRegTEX0 TEX0 = r->TEX0;
 
+	bool MTBA_reload = false;
+	if (m_env.CTXT[i].TEX0.TBP0 != TEX0.TBP0 && m_env.CTXT[i].TEX1.MTBA)
+		MTBA_reload = true;
+
 	// Spec max is 10
 	//
 	// Yakuza (minimap)
@@ -917,7 +921,8 @@ void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 
 	ApplyTEX0<i>(TEX0);
 
-	if (m_env.CTXT[i].TEX1.MTBA)
+	// Textures must be of equal width/height and a minimum of 32x32
+	if (MTBA_reload && TEX0.TW == TEX0.TH && TEX0.TW >= 5)
 	{
 		// NOTE 1: TEX1.MXL must not be automatically set to 3 here.
 		// NOTE 2: Mipmap levels are tightly packed, if (tbw << 6) > (1 << tw) then the left-over space to the right is used. (common for PSM_PSMT4)
@@ -927,32 +932,38 @@ void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 		uint32 bw = TEX0.TBW;
 		uint32 w = 1u << TEX0.TW;
 		uint32 h = 1u << TEX0.TH;
+		uint minwidth = m_context->TEX1.MMIN >= 4 ? 8 : 1;
 
 		const uint32 bpp = GSLocalMemory::m_psm[TEX0.PSM].bpp;
 
-		if (h < w)
-			h = w;
-
-		bp += ((w * h * bpp >> 3) + 255) >> 8;
-		bw = std::max<uint32>(bw >> 1, 1);
-		w = std::max<uint32>(w >> 1, 1);
-		h = std::max<uint32>(h >> 1, 1);
+		bp += (int)((w * h * ((float)bpp / 8))) >> 8;
+		if (w > minwidth)
+		{
+			bw = std::max<uint32>(bw >> 1, 1);
+			w = std::max<uint32>(w >> 1, 1);
+			h = std::max<uint32>(h >> 1, 1);
+		}
 
 		m_env.CTXT[i].MIPTBP1.TBP1 = bp;
 		m_env.CTXT[i].MIPTBP1.TBW1 = bw;
 
-		bp += ((w * h * bpp >> 3) + 255) >> 8;
-		bw = std::max<uint32>(bw >> 1, 1);
-		w = std::max<uint32>(w >> 1, 1);
-		h = std::max<uint32>(h >> 1, 1);
+		bp += (int)((w * h * ((float)bpp / 8))) >> 8;
+		
+		if (w > minwidth)
+		{
+			bw = std::max<uint32>(bw >> 1, 1);
+			w = std::max<uint32>(w >> 1, 1);
+			h = std::max<uint32>(h >> 1, 1);
+		}
 
 		m_env.CTXT[i].MIPTBP1.TBP2 = bp;
 		m_env.CTXT[i].MIPTBP1.TBW2 = bw;
 
-		bp += ((w * h * bpp >> 3) + 255) >> 8;
-		bw = std::max<uint32>(bw >> 1, 1);
-		w = std::max<uint32>(w >> 1, 1);
-		h = std::max<uint32>(h >> 1, 1);
+		bp += (int)((w * h * ((float)bpp / 8))) >> 8;
+		if (w > minwidth)
+		{
+			bw = std::max<uint32>(bw >> 1, 1);
+		}
 
 		m_env.CTXT[i].MIPTBP1.TBP3 = bp;
 		m_env.CTXT[i].MIPTBP1.TBW3 = bw;
@@ -2895,7 +2906,7 @@ bool GSState::IsOpaque()
 
 bool GSState::IsMipMapDraw()
 {
-	return m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0;
+	return m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0 && (!m_context->TEX1.MTBA || m_context->TEX0.TH == m_context->TEX0.TW);
 }
 
 bool GSState::IsMipMapActive()
