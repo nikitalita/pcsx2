@@ -328,7 +328,7 @@ template void vtlb_memWrite<mem32_t>(u32 mem, mem32_t data);
 static void GoemonTlbMissDebug()
 {
 	// 0x3d5580 is the address of the TLB cache
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3dcd80];
 
 	for (u32 i = 0; i < 150; i++) {
 		if (tlb[i].valid == 0x1 && tlb[i].low_add != tlb[i].high_add)
@@ -340,8 +340,8 @@ static void GoemonTlbMissDebug()
 
 void __fastcall GoemonPreloadTlb()
 {
-	// 0x3d5580 is the address of the TLB cache table
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	// 0x3dcd80 is the address of the TLB cache table
+	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3dcd80];
 
 	for (u32 i = 0; i < 150; i++) {
 		if (tlb[i].valid == 0x1 && tlb[i].low_add != tlb[i].high_add) {
@@ -364,8 +364,8 @@ void __fastcall GoemonPreloadTlb()
 
 void __fastcall GoemonUnloadTlb(u32 key)
 {
-	// 0x3d5580 is the address of the TLB cache table
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	// 0x3dcd80 is the address of the TLB cache table
+	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3dcd80];
 	for (u32 i = 0; i < 150; i++) {
 		if (tlb[i].key == key) {
 			if (tlb[i].valid == 0x1) {
